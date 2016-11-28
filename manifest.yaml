@@ -26,9 +26,9 @@ components:
         type: select
         options:
           - label: PostgreSQL
-            name: postgres
-          - label: SQLite
-            name: sqlite
+            value: postgres
+          - label: MySQL / MariaDB
+            value: mysql
         card: true
       - name: hostname
         label: Hostname

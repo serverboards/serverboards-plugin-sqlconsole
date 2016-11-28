@@ -27,6 +27,14 @@ class RPC:
         self.subscriptions_ids={}
         self.subscription_id=1
 
+        class WriteToLog:
+          def __init__(self, rpc):
+            self.rpc=rpc
+          def write(self, txt, *args, **kwargs):
+            self.rpc.error(txt.rstrip())
+
+        self.write_to_log=WriteToLog(self)
+
     def set_debug(self, debug):
         if debug is True:
             self.stderr=sys.stderr
@@ -34,13 +42,42 @@ class RPC:
             self.stderr=debug
         self.debug("--- BEGIN ---")
 
-    def debug(self, x):
+    def __decorate_log(self, extra, level=2):
+        import inspect
+        callerf=inspect.stack()[level]
+
+        caller={
+          "function":callerf[3],
+          "file":callerf[1],
+          "line":callerf[2],
+          "pid":os.getpid(),
+        }
+        caller.update(extra)
+        return caller
+
+    def debug(self, msg, extra={}, level=0):
+        self.debug_stdout(msg)
+        return self.event("log.debug", str(msg), self.__decorate_log(extra, level=2+level))
+    def info(self, msg, extra={}, level=0):
+        self.debug_stdout(msg)
+        return self.event("log.info", str(msg), self.__decorate_log(extra, level=2+level))
+    def error(self, msg, extra={}, level=0):
+        self.debug_stdout(msg)
+        return self.event("log.error", str(msg), self.__decorate_log(extra, level=2+level))
+    def info(self, msg, extra={}, level=0):
+        self.debug_stdout(msg)
+        return self.event("log.info", str(msg), self.__decorate_log(extra, level=2+level))
+
+    def debug_stdout(self, x):
         if not self.stderr:
             return
         if type(x) != str:
             x=repr(x)
-        self.stderr.write("\r%d: %s\r\n"%(self.pid, x))
-        self.stderr.flush()
+        try:
+            self.stderr.write("\r%d: %s\r\n"%(self.pid, x))
+            self.stderr.flush()
+        except BlockingIOError:
+            pass
 
     def add_method(self, name, f):
         self.rpc_registry[name]=f
@@ -60,7 +97,7 @@ class RPC:
                     'id' : call_id
                     }
             except Exception as e:
-                import traceback; traceback.print_exc()
+                import traceback; traceback.print_exc(file=self.write_to_log)
                 return {
                     'error': str(e),
                     'id' : call_id
@@ -72,7 +109,7 @@ class RPC:
                 try:
                     f(*args, **kwargs)
                 except:
-                    import traceback; traceback.print_exc()
+                    import traceback; traceback.print_exc(file=self.write_to_log)
             return None
 
         return { 'error':'unknown_method', 'id': call_id }
@@ -106,7 +143,10 @@ class RPC:
                     self.events[ready]()
             else: # timeout
                 self.timers[timeout_id]=(time.time()+timeout, timeout_id, timeout, timeout_cont)
-                timeout_cont()
+                try:
+                    timeout_cont()
+                except:
+                    import traceback; traceback.print_exc(file=self.write_to_log)
 
         self.loop_status=prev_status
 
@@ -115,7 +155,7 @@ class RPC:
         if not l:
             self.loop_stop()
             return
-        self.debug(l)
+        self.debug_stdout(l)
         rpc = json.loads(l)
         self.__process_request(rpc)
 
@@ -137,8 +177,9 @@ class RPC:
     def remove_timer(self, tid):
         del self.timers[tid]
 
-    def loop_stop(self):
-        self.debug("--- EOF ---")
+    def loop_stop(self, debug=True):
+        if debug:
+          self.debug("--- EOF ---")
         self.loop_status='EXIT'
 
     def __process_request(self, rpc):
@@ -149,16 +190,23 @@ class RPC:
                 try:
                     self.println(json.dumps(res))
                 except:
-                    import traceback; traceback.print_exc()
+                    import traceback; traceback.print_exc(file=self.write_to_log)
                     sys.stderr.write(repr(res)+'\n')
                     self.println(json.dumps({"error": "serializing json response", "id": res["id"]}))
             else:
                 self.manual_replies.discard(res.get("id"))
 
     def println(self, line):
-        self.debug(line)
-        self.stdout.write(line + '\n')
-        self.stdout.flush()
+        self.debug_stdout(line)
+        try:
+          self.stdout.write(line + '\n')
+          self.stdout.flush()
+        except IOError:
+          if self.loop_status=='EXIT':
+            sys.exit(1)
+          self.loop_stop(debug=False)
+
+
 
     def log(self, message=None, type="LOG"):
         assert message
@@ -202,6 +250,7 @@ class RPC:
 
         while True: # mini loop, may request calls while here
             res = sys.stdin.readline()
+            self.debug_stdout(res)
             if not res:
                 raise Exception("Closed connection")
             rpc = json.loads(res)
@@ -230,7 +279,7 @@ class RPC:
         self.subscription_id+=1
 
         self.debug("Subscribed to %s"%event)
-        self.debug("Added subscription %s id %s: %s"%(eventname, sid, repr(self.subscriptions[eventname])))
+        #self.debug("Added subscription %s id %s: %s"%(eventname, sid, repr(self.subscriptions[eventname])))
         return sid
 
     def unsubscribe(self, subscription_id):
@@ -284,7 +333,13 @@ def loop(debug=None):
     rpc.loop()
 
 def debug(s):
-    rpc.debug(s)
+    rpc.debug(s, level=1)
+def info(s):
+    rpc.debug(s, level=1)
+def warning(s):
+    rpc.debug(s, level=1)
+def error(s):
+    rpc.debug(s, level=1)
 
 class Config:
     def __init__(self):

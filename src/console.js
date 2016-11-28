@@ -25,7 +25,7 @@ const Console=React.createClass({
       plugin_id=pid
       console.log("plugin id %o", plugin_id)
       this.setState({plugin_id})
-      return this.openConnection("template1", plugin_id)
+      return this.openConnection(null, plugin_id)
     }).then( () => {
       console.log("plugin id %o", plugin_id)
       return rpc.call(`${plugin_id}.databases`).then( (databases) => {
@@ -64,6 +64,7 @@ const Console=React.createClass({
       password_pw: c.password_pw,
       database: database
     }).then( () => rpc.call(`${plugin_id}.tables`)).then( (tables) => {
+      $(this.refs.table).dropdown("set value", "")
       $(this.refs.table).dropdown("set text", "Select a table")
       this.setState({tables, loading_tables: false})
     })
@@ -82,6 +83,12 @@ const Console=React.createClass({
       this.setState({loading_data: false, data: undefined, columns:[]})
     })
     $(this.refs.el).find('#query_area').val(sql)
+  },
+  handleTableSelect(ev){
+    const table=ev.target.value
+    if (!table || table=="")
+      return;
+    this.handleExecute(`SELECT * FROM ${table} LIMIT 100;`)
   },
   render(){
     const props=this.props
@@ -115,9 +122,10 @@ const Console=React.createClass({
                       <i className="ui loading notched circle icon"/>
                     ) : null}
                   </label>
-                  <select name="tables" ref="table" className="ui search dropdown" onChange={(ev) => this.handleExecute(`SELECT * FROM ${ev.target.value} LIMIT 100;`)}>
+                  <select name="tables" ref="table" className="ui search dropdown" onChange={this.handleTableSelect}>
+                    <option value=""></option>
                     {state.tables.sort().map( (db) => (
-                      <option value={db}>{db}</option>
+                      <option key={db} value={db}>{db}</option>
                     ))}
                   </select>
                 </div>
