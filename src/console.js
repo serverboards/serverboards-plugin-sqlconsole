@@ -11,9 +11,12 @@ const Console=React.createClass({
       data:[
       ],
       columns:["","",""],
-      databases: ['template1'],
+      databases: [],
       tables: [],
       plugin_id: undefined,
+      loading_database: true,
+      loading_tables: false,
+      loading_data: false,
     }
   },
   componentDidMount(){
@@ -26,7 +29,8 @@ const Console=React.createClass({
     }).then( () => {
       console.log("plugin id %o", plugin_id)
       return rpc.call(`${plugin_id}.databases`).then( (databases) => {
-        this.setState({databases})
+        this.setState({databases, loading_database: false})
+        $(this.refs.database).dropdown("set text", "Select a database")
       })
     }).catch( (e) => {
       console.error(e)
@@ -34,6 +38,8 @@ const Console=React.createClass({
     })
 
     $(this.refs.el).find('.ui.dropdown').dropdown()
+    $(this.refs.database).dropdown("set text", "Loading database list...")
+    $(this.refs.table).dropdown("set text", "")
   },
   componentWillUnmount(){
     console.log("Stop database connection? %o", this.state.plugin_id)
@@ -47,6 +53,8 @@ const Console=React.createClass({
       plugin_id=this.state.plugin_id
     const c=this.props.service.config
     console.log(this.props.service)
+    $(this.refs.table).dropdown("set text", "Loading tables...")
+    this.setState({loading_tables:true})
     return rpc.call(`${plugin_id}.open`, {
       via: c.via.uuid,
       type: c.type,
@@ -56,18 +64,22 @@ const Console=React.createClass({
       password_pw: c.password_pw,
       database: database
     }).then( () => rpc.call(`${plugin_id}.tables`)).then( (tables) => {
-      this.setState({tables})
+      $(this.refs.table).dropdown("set text", "Select a table")
+      this.setState({tables, loading_tables: false})
     })
   },
   handleExecute(sql, plugin_id){
+    console.log("Execute SQL: %o", sql)
+    this.setState({loading_data: true})
     if (!plugin_id)
       plugin_id=this.state.plugin_id
     rpc.call(`${plugin_id}.execute`, [sql]).then( (res) => {
       console.log("Got response: %o", res)
-      this.setState({data:res.data, columns:res.columns})
+      this.setState({data:res.data, columns:res.columns, loading_data: false})
     }).catch((e) => {
       console.error(e)
       Flash.error(String(e))
+      this.setState({loading_data: false, data: undefined, columns:[]})
     })
     $(this.refs.el).find('#query_area').val(sql)
   },
@@ -75,6 +87,7 @@ const Console=React.createClass({
     const props=this.props
     const state=this.state
     const service=props.service || {}
+    const loading_data = state.loading_data || state.loading_database || state.loading_tables
     return (
       <div ref="el">
         <div className="ui top secondary menu">
@@ -84,16 +97,26 @@ const Console=React.createClass({
           <div className="ui form">
             <div className="two fields">
               <div className="field">
-                <label>Database</label>
-                <select name="database" defaultValue="template1" className="ui dropdown" onChange={(ev) => this.openConnection(ev.target.value)}>
+                <label>
+                  Database
+                    {state.loading_database ? (
+                      <i className="ui loading notched circle icon"/>
+                    ) : null}
+                </label>
+                <select name="database" ref="database" className="ui search dropdown" onChange={(ev) => this.openConnection(ev.target.value)}>
                   {state.databases.map( (db) => (
-                    <option value={db}>{db}</option>
+                    <option key={db} value={db}>{db}</option>
                   ))}
                 </select>
               </div>
               <div className="field">
-                <label>Table</label>
-                <select name="tables" className="ui dropdown" onChange={(ev) => this.handleExecute(`SELECT * FROM ${ev.target.value} LIMIT 100;`)}>
+                <label>
+                  Table
+                  {state.loading_tables ? (
+                    <i className="ui loading notched circle icon"/>
+                  ) : null}
+                </label>
+                <select name="tables" ref="table" className="ui search dropdown" onChange={(ev) => this.handleExecute(`SELECT * FROM ${ev.target.value} LIMIT 100;`)}>
                   {state.tables.sort().map( (db) => (
                     <option value={db}>{db}</option>
                   ))}
@@ -101,8 +124,8 @@ const Console=React.createClass({
               </div>
             </div>
           </div>
-          <DataGrid data={state.data} headers={state.columns}/>
-          <SQLTextInput onExecute={this.handleExecute}/>
+          <DataGrid data={state.data} headers={state.columns} loading={loading_data}/>
+          <SQLTextInput onExecute={this.handleExecute} loading={loading_data}/>
         </div>
       </div>
     )

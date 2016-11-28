@@ -27,7 +27,7 @@ const SQLTextInput=React.createClass({
           id="query_area"
           />
         <div className="ui buttons" style={{marginTop: 10}}>
-          <button className="ui button yellow" onClick={this.handleExecute} style={{paddingTop:10}}>Execute query (Crtl+Enter)</button>
+          <button className={`ui button yellow ${ this.props.loading ? "disabled" : ""}`} onClick={this.handleExecute} style={{paddingTop:10}}>Execute query (Crtl+Enter)</button>
           <button className="ui button" onClick={this.clearTextArea} style={{paddingTop:10}}>Clear area (ESC)</button>
         </div>
       </div>
