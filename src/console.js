@@ -89,41 +89,43 @@ const Console=React.createClass({
     const service=props.service || {}
     const loading_data = state.loading_data || state.loading_database || state.loading_tables
     return (
-      <div ref="el">
+      <div ref="el" style={{flexDirection: "column", flexGrow: 1, display: "flex"}}>
         <div className="ui top secondary menu">
           <h3 className="ui header">SQL Console for <i>{service.name}</i></h3>
-        </div>
-        <div className="ui container">
-          <div className="ui form">
-            <div className="two fields">
-              <div className="field">
-                <label>
-                  Database
-                    {state.loading_database ? (
+          <div className="right menu">
+            <div className="ui form">
+              <div className="two fields">
+                <div className="field">
+                  <label>
+                    Database
+                      {state.loading_database ? (
+                        <i className="ui loading notched circle icon"/>
+                      ) : null}
+                  </label>
+                  <select name="database" ref="database" className="ui search dropdown" onChange={(ev) => this.openConnection(ev.target.value)}>
+                    {state.databases.map( (db) => (
+                      <option key={db} value={db}>{db}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>
+                    Table
+                    {state.loading_tables ? (
                       <i className="ui loading notched circle icon"/>
                     ) : null}
-                </label>
-                <select name="database" ref="database" className="ui search dropdown" onChange={(ev) => this.openConnection(ev.target.value)}>
-                  {state.databases.map( (db) => (
-                    <option key={db} value={db}>{db}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>
-                  Table
-                  {state.loading_tables ? (
-                    <i className="ui loading notched circle icon"/>
-                  ) : null}
-                </label>
-                <select name="tables" ref="table" className="ui search dropdown" onChange={(ev) => this.handleExecute(`SELECT * FROM ${ev.target.value} LIMIT 100;`)}>
-                  {state.tables.sort().map( (db) => (
-                    <option value={db}>{db}</option>
-                  ))}
-                </select>
+                  </label>
+                  <select name="tables" ref="table" className="ui search dropdown" onChange={(ev) => this.handleExecute(`SELECT * FROM ${ev.target.value} LIMIT 100;`)}>
+                    {state.tables.sort().map( (db) => (
+                      <option value={db}>{db}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
+        </div>
+        <div className="ui container" style={{flexDirection: "column", flexGrow: 1, display: "flex", paddingBottom: 20}}>
           <DataGrid data={state.data} headers={state.columns} loading={loading_data}/>
           <SQLTextInput onExecute={this.handleExecute} loading={loading_data}/>
         </div>

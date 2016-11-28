@@ -9,13 +9,13 @@ function DataGrid(props){
 
   if (props.data==undefined)
     return (
-      <div style={{height:"40vh", overflow: "scroll"}}>
+      <div style={{flexGrow:1, overflow: "scroll"}}>
         <table className={`ui red celled unstackable table`}>
         </table>
       </div>
     )
   return (
-    <div style={{height:"40vh", overflow: "scroll"}}>
+    <div style={{flexGrow:1, overflow: "scroll"}}>
       <table className={`ui ${ props.loading ? "grey" : "green" } celled unstackable table`}>
         <thead>
           <tr>

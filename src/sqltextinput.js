@@ -19,12 +19,13 @@ const SQLTextInput=React.createClass({
   },
   render(){
     return (
-      <div className="ui form">
+      <div className="ui form" style={{flexGrow:0}}>
         <textarea
           ref="textarea"
-          className="ui input"
+          className={`ui input ${ this.props.loading ? "disabled" : ""}`}
           placeholder="Write your SQL query and press Crtl+Enter"
           id="query_area"
+          disabled={this.props.loading}
           />
         <div className="ui buttons" style={{marginTop: 10}}>
           <button className={`ui button yellow ${ this.props.loading ? "disabled" : ""}`} onClick={this.handleExecute} style={{paddingTop:10}}>Execute query (Crtl+Enter)</button>
