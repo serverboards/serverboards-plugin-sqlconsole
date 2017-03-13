@@ -33,7 +33,7 @@ class Connection:
     def connect_port(self, via, hostname, port):
         rpc.debug("Connection via %s"%via)
         self.ssh_plugin_id = rpc.call("plugin.start", "serverboards.core.ssh/daemon")
-        service = rpc.call("service.info", via)
+        service = rpc.call("service.get", via)
         self.port = rpc.call("%s.open_port"%self.ssh_plugin_id, url=service['config']['url'], hostname=hostname, port=port)
         rpc.debug("Use port  %s"%self.port)
         hostname="localhost"
