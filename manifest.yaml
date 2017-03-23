@@ -4,7 +4,7 @@ description: |
   Access and perform basic queries at a remote SQL server accesible via a SSH
   tunel.
 author: David Moreno <dmoreno@serverboards.io>
-version: 0.0.1
+version: 17.04
 
 components:
   - id: service
