@@ -3,6 +3,22 @@ import sys, os, datetime
 import serverboards
 from serverboards import rpc
 
+td_to_s_multiplier=[
+    ("ms", 0.001),
+    ("s", 1),
+    ("m", 60),
+    ("h", 60*60),
+    ("d", 24*60*60),
+]
+
+def time_description_to_seconds(td):
+    if type(td) in (int, float):
+        return float(td)
+    for sufix, multiplier in td_to_s_multiplier:
+        if td.endswith(sufix):
+            return float(td[:-len(sufix)])*multiplier
+    return float(td)
+
 class Connection:
     conn = False
     port = None
@@ -127,6 +143,49 @@ def tables():
 @serverboards.rpc_method
 def execute(query):
     return conn.execute(query)
+
+def is_truish(s):
+    if len(s)==0:
+        return False
+    while type(s) == list and len(s)==1:
+        s=s[0]
+    serverboards.debug("Truish? %s"%(s))
+    if s==0:
+        return False
+    if s==[]:
+        return False
+    if s==False:
+        return False
+    return True
+
+@serverboards.rpc_method
+def watch_start(id=None, period=None, service=None, database=None, query=None, **kwargs):
+    state = None
+    period_s = time_description_to_seconds(period or "5m")
+    open(**service["config"], database=database)
+
+    def check_ok():
+        try:
+            p = execute(query)["data"]
+        except:
+            serverboards.error("Error on SQL query: %s"%query)
+            p = False
+        serverboards.debug("Checking query: %s: %s"%(query, p))
+        nstate = "ok" if is_truish(p) else "nok"
+        if state != nstate:
+            serverboards.rpc.event("trigger", {"id":id, "state": nstate})
+        return True
+
+    check_ok()
+    timer_id = serverboards.rpc.add_timer(period_s, check_ok)
+    serverboards.info("Start SQL query watch %s"%timer_id)
+    return timer_id
+
+@serverboards.rpc_method
+def watch_stop(id):
+    serverboards.info("Stop SQL query watch %s"%(id))
+    serverboards.rpc.remove_timer(id)
+    return "ok"
 
 if __name__=='__main__':
     if len(sys.argv)>1 and sys.argv[1]=="test":

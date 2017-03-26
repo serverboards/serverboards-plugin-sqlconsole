@@ -59,4 +59,43 @@ components:
     timeout: 15m
     command: ./serverboards-sql.py
     name: Remote run SQL commands
-    perms: plugin service.info
+    perms: plugin service.get
+
+
+  - id: trigger
+    name: SQL Query
+    description: Rule trigger for remote SQL Query
+    type: trigger
+    trait: sql
+    states: nok ok
+    command: daemon
+    start:
+      method: watch_start
+      params:
+        - name: service
+          label: SQL Service
+          type: service
+          traits: sql
+        - name: period
+          label: Check period
+          description: |
+            Check every given time for the expression.
+            Time can use time modifiers as 1m, 30s, 1h...
+          placeholder: 5m
+          default: 5m
+          card: true
+          type: text
+        - name: database
+          label: Database Name
+          type: text
+          placeholder: template1
+        - name: query
+          card: true
+          label: SQL Query
+          placeholder: "SELECT count(*) FROM logs WHERE timestamp > (current_date -1)"
+          description: |
+            Which query to watch. The trigger will stay in the `ok` status
+            as long as the query result is truish (true, != 0 or not empty).
+            If no data or false, it changes to the `nok` state.
+          type: text
+    stop: watch_stop
