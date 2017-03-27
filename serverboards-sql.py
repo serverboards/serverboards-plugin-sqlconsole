@@ -148,9 +148,9 @@ def execute(query):
 def is_truish(s):
     if len(s)==0:
         return False
-    while type(s) == list and len(s)>1:
+    while type(s) == list and len(s)>=1:
         s=s[0]
-    serverboards.debug("Truish? %s"%(s))
+    #serverboards.debug("Truish? %s"%(s))
     if s==0:
         return False
     if s==[]:
