@@ -97,5 +97,8 @@ components:
             Which query to watch. The trigger will stay in the `ok` status
             as long as the query result is truish (true, != 0 or not empty).
             If no data or false, it changes to the `nok` state.
+
+            Only first column is checked, other columns may be used for logging
+            pourposes.
           type: text
     stop: watch_stop

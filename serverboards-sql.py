@@ -64,6 +64,7 @@ class PostgreSQL(Connection):
         if via or hostname!="localhost":
             hostname, port = self.connect_port(via, hostname, port)
         self.conn = psycopg2.connect(database=database, user=username, password=password_pw, host=hostname, port=port)
+        self.conn.autocommit = True # no transaction at start
     def databases(self):
         return [
             x[0] for x in
@@ -147,7 +148,7 @@ def execute(query):
 def is_truish(s):
     if len(s)==0:
         return False
-    while type(s) == list and len(s)==1:
+    while type(s) == list and len(s)>1:
         s=s[0]
     serverboards.debug("Truish? %s"%(s))
     if s==0:
@@ -160,24 +161,26 @@ def is_truish(s):
 
 @serverboards.rpc_method
 def watch_start(id=None, period=None, service=None, database=None, query=None, **kwargs):
-    state = None
     period_s = time_description_to_seconds(period or "5m")
     open(**service["config"], database=database)
-
-    def check_ok():
-        try:
-            p = execute(query)["data"]
-        except:
-            serverboards.error("Error on SQL query: %s"%query)
-            p = False
-        serverboards.debug("Checking query: %s: %s"%(query, p))
-        nstate = "ok" if is_truish(p) else "nok"
-        if state != nstate:
-            serverboards.rpc.event("trigger", {"id":id, "state": nstate})
-        return True
-
-    check_ok()
-    timer_id = serverboards.rpc.add_timer(period_s, check_ok)
+    class Check:
+        def __init__(self):
+            self.state=None
+        def check_ok(self):
+            try:
+                p = execute(query)
+            except:
+                serverboards.error("Error on SQL query: %s"%query)
+                p = False
+            serverboards.debug("Checking query: %s: %s"%(query, p))
+            nstate = "ok" if is_truish(p["data"]) else "nok"
+            if self.state != nstate:
+                serverboards.rpc.event("trigger", {"id":id, "state": nstate})
+                self.state=nstate
+            return True
+    check = Check()
+    check.check_ok()
+    timer_id = serverboards.rpc.add_timer(period_s, check.check_ok)
     serverboards.info("Start SQL query watch %s"%timer_id)
     return timer_id
 
