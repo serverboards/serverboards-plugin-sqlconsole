@@ -122,7 +122,7 @@ var asyncGenerator = function () {
   };
 }();
 
-var React$3=Serverboards.React;function DataGrid(a){function b(d){return"object"==("undefined"==typeof d?"undefined":_typeof(d))?JSON.stringify(d):d}return void 0==a.data?React$3.createElement("div",{style:{flexGrow:1,overflow:"scroll"}},React$3.createElement("table",{className:"ui red celled unstackable table"})):React$3.createElement("div",{style:{flexGrow:1,overflow:"scroll"}},React$3.createElement("table",{className:"ui "+(a.loading?"grey":"green")+" celled unstackable table"},React$3.createElement("thead",null,React$3.createElement("tr",null,a.headers.map(function(d,e){return React$3.createElement("th",{key:e},d)}))),React$3.createElement("tbody",null,a.data.map(function(d,e){return React$3.createElement("tr",{key:e},d.map(function(f,g){return React$3.createElement("td",{key:g},b(f))}))}))))}
+var React$3=Serverboards.React;function DataGrid(a){function b(d){return"object"==("undefined"==typeof d?"undefined":_typeof(d))?JSON.stringify(d):!0===d?"True":!1==d?"False":d}return void 0==a.data?React$3.createElement("div",{style:{flexGrow:1,overflow:"scroll"}},React$3.createElement("table",{className:"ui red celled unstackable table"})):React$3.createElement("div",{style:{flexGrow:1,overflow:"scroll"}},React$3.createElement("table",{className:"ui "+(a.loading?"grey":"green")+" celled unstackable table"},React$3.createElement("thead",null,React$3.createElement("tr",null,a.headers.map(function(d,e){return React$3.createElement("th",{key:e},d)}))),React$3.createElement("tbody",null,a.data.map(function(d,e){return React$3.createElement("tr",{key:e},d.map(function(f,g){return React$3.createElement("td",{key:g},b(f))}))}))))}
 
 var React$1=Serverboards.React;
 var rpc=Serverboards.rpc;
