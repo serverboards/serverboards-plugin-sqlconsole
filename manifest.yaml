@@ -66,7 +66,7 @@ components:
     name: SQL Query
     description: Rule trigger for remote SQL Query
     type: trigger
-    trait: sql
+    traits: sql
     states: nok ok
     command: daemon
     start:
