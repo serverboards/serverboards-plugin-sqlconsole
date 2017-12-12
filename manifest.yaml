@@ -11,7 +11,7 @@ components:
     type: service
     name: SQL Server
     icon: database
-    traits: sql
+    traits: sql server
     description: |
       Remote database
     fields:
@@ -65,8 +65,9 @@ components:
   - id: trigger
     name: SQL Query
     description: Rule trigger for remote SQL Query
+    icon: database
     type: trigger
-    traits: sql
+    traits: sql server
     states: nok ok
     command: daemon
     start:
