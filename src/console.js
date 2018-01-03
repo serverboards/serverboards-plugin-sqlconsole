@@ -1,6 +1,4 @@
-const React = Serverboards.React
-const rpc = Serverboards.rpc
-const Flash = Serverboards.Flash
+const {React, rpc, Flash, plugin} = Serverboards
 
 import SQLTextInput from './sqltextinput'
 import DataGrid from './datagrid'
@@ -13,22 +11,25 @@ const Console=React.createClass({
       columns:["","",""],
       databases: [],
       tables: [],
-      plugin_id: undefined,
+      plugin: undefined,
       loading_database: true,
       loading_tables: false,
       loading_data: false,
+      service: this.props.service,
     }
   },
   componentDidMount(){
-    let plugin_id
-    rpc.call("plugin.start",["serverboards.remotesql/daemon"]).then( (pid) => {
-      plugin_id=pid
-      console.log("plugin id %o", plugin_id)
-      this.setState({plugin_id})
-      return this.openConnection(null, plugin_id)
-    }).then( () => {
-      console.log("plugin id %o", plugin_id)
-      return rpc.call(`${plugin_id}.databases`).then( (databases) => {
+    Promise.all([
+      plugin.start("serverboards.remotesql/daemon"),
+      rpc.call("service.get", [this.props.service.uuid])
+    ]).then( (plugin_service) => {
+      let plugin = plugin_service[0]
+      let service = plugin_service[1]
+      console.log("plugin_service", plugin_service, plugin, service)
+      this.setState({plugin, service})
+      return this.openConnection(null, plugin, service).then( () => plugin )
+    }).then( (plugin) => {
+      return plugin.call("databases").then( (databases) => {
         this.setState({databases, loading_database: false})
         $(this.refs.database).dropdown("set text", "Select a database")
       })
@@ -42,20 +43,24 @@ const Console=React.createClass({
     $(this.refs.table).dropdown("set text", "")
   },
   componentWillUnmount(){
-    console.log("Stop database connection? %o", this.state.plugin_id)
-    if (this.state.plugin_id){
+    console.log("Stop database connection? %o", this.state.plugin)
+    if (this.state.plugin){
       console.log("Stop database connection")
-      rpc.call("plugin.stop",[this.state.plugin_id])
+      this.state.plugin.call("close", []).then( () =>
+        this.state.plugin.stop()
+      )
     }
   },
-  openConnection(database, plugin_id){
-    if (!plugin_id)
-      plugin_id=this.state.plugin_id
-    const c=this.props.service.config
-    console.log(this.props.service)
+  openConnection(database, plugin, service){
+    if (!plugin)
+      plugin=this.state.plugin
+    if (!service)
+      service=this.state.service
+    const c=service.config
+    console.log("service", service, plugin)
     $(this.refs.table).dropdown("set text", "Loading tables...")
     this.setState({loading_tables:true})
-    return rpc.call(`${plugin_id}.open`, {
+    return plugin.call("open", {
       via: c.via.uuid,
       type: c.type,
       hostname: c.hostname,
@@ -63,18 +68,18 @@ const Console=React.createClass({
       username: c.username,
       password_pw: c.password_pw,
       database: database
-    }).then( () => rpc.call(`${plugin_id}.tables`)).then( (tables) => {
+    }).then( () => plugin.call("tables")).then( (tables) => {
       $(this.refs.table).dropdown("set value", "")
       $(this.refs.table).dropdown("set text", "Select a table")
       this.setState({tables, loading_tables: false})
     })
   },
-  handleExecute(sql, plugin_id){
+  handleExecute(sql, plugin){
     console.log("Execute SQL: %o", sql)
     this.setState({loading_data: true})
-    if (!plugin_id)
-      plugin_id=this.state.plugin_id
-    rpc.call(`${plugin_id}.execute`, [sql]).then( (res) => {
+    if (!plugin)
+      plugin=this.state.plugin
+    plugin.call("execute", [sql]).then( (res) => {
       console.log("Got response: %o", res)
       this.setState({data:res.data, columns:res.columns, loading_data: false})
     }).catch((e) => {
@@ -93,7 +98,7 @@ const Console=React.createClass({
   render(){
     const props=this.props
     const state=this.state
-    const service=props.service || {}
+    const service=state.service || {}
     const loading_data = state.loading_data || state.loading_database || state.loading_tables
     return (
       <div ref="el" style={{flexDirection: "column", flexGrow: 1, display: "flex"}}>

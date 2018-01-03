@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 import sys, os, datetime
 import serverboards
-from serverboards import rpc
+from serverboards import rpc, print
 
 td_to_s_multiplier=[
     ("ms", 0.001),
@@ -100,6 +100,7 @@ conn=False
 
 @serverboards.rpc_method
 def open(via=None, type="postgresql", hostname="localhost", port=None, username=None, password_pw=None, database=None):
+    print("open", via, type, hostname, port, username, password_pw, database)
     global conn
     if conn:
         conn.close()
@@ -118,7 +119,6 @@ def open(via=None, type="postgresql", hostname="localhost", port=None, username=
     if type=="mysql":
         port = port or 3306
         database = database or "mysql"
-        print(repr((via, hostname, port, username, password_pw, database)))
         conn=MySQL(via, hostname, port, username, password_pw, database)
         return True
 
@@ -164,8 +164,6 @@ def watch_start(id=None, period=None, service=None, database=None, query=None, *
     period_s = time_description_to_seconds(period or "5m")
     open(**service["config"], database=database)
     class Check:
-        def __init__(self):
-            self.state=None
         def check_ok(self):
             try:
                 p = execute(query)
@@ -173,10 +171,7 @@ def watch_start(id=None, period=None, service=None, database=None, query=None, *
                 serverboards.error("Error on SQL query: %s"%query)
                 p = False
             serverboards.debug("Checking query: %s: %s"%(query, p))
-            nstate = "ok" if is_truish(p["data"]) else "nok"
-            if self.state != nstate:
-                serverboards.rpc.event("trigger", {"id":id, "state": nstate})
-                self.state=nstate
+            serverboards.rpc.event("trigger", {"id":id, "value": p["data"]})
             return True
     check = Check()
     check.check_ok()

@@ -4,7 +4,7 @@ description: |
   Access and perform basic queries at a remote SQL server accesible via a SSH
   tunel.
 author: David Moreno <dmoreno@serverboards.io>
-version: 17.04
+version: "17.10"
 
 components:
   - id: service
@@ -68,7 +68,6 @@ components:
     icon: database
     type: trigger
     traits: sql server
-    states: nok ok
     command: daemon
     start:
       method: watch_start
@@ -102,4 +101,6 @@ components:
             Only first column is checked, other columns may be used for logging
             pourposes.
           type: text
+    result:
+      value: Response of the query
     stop: watch_stop
