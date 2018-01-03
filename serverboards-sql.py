@@ -48,9 +48,8 @@ class Connection:
 
     def connect_port(self, via, hostname, port):
         rpc.debug("Connection via %s"%via)
-        self.ssh_plugin_id = rpc.call("plugin.start", "serverboards.core.ssh/daemon")
-        service = rpc.call("service.get", via)
-        self.port = rpc.call("%s.open_port"%self.ssh_plugin_id, url=service['config']['url'], hostname=hostname, port=port)
+        with serverboards.Plugin("serverboards.core.ssh/daemon") as ssh:
+            self.port = ssh.open_port(service = via, hostname=hostname, port=port)
         rpc.debug("Use port  %s"%self.port)
         hostname="localhost"
         return (hostname, self.port)
@@ -159,10 +158,16 @@ def is_truish(s):
         return False
     return True
 
+@serverboards.cache_ttl(600)
+def get_service_config(service_id):
+    service = serverboards.service.get(service_id)
+    return service["config"]
+
 @serverboards.rpc_method
-def watch_start(id=None, period=None, service=None, database=None, query=None, **kwargs):
+def watch_start(id=None, period=None, service_id=None, database=None, query=None, **kwargs):
     period_s = time_description_to_seconds(period or "5m")
-    open(**service["config"], database=database)
+    print(id, period, service_id, database, query, kwargs)
+    open(**get_service_config(service_id), database=database)
     class Check:
         def check_ok(self):
             try:
@@ -175,7 +180,7 @@ def watch_start(id=None, period=None, service=None, database=None, query=None, *
             return True
     check = Check()
     check.check_ok()
-    timer_id = serverboards.rpc.add_timer(period_s, check.check_ok)
+    timer_id = serverboards.rpc.add_timer(period_s, check.check_ok, rearm=True)
     serverboards.info("Start SQL query watch %s"%timer_id)
     return timer_id
 

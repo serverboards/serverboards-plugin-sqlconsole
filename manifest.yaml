@@ -72,7 +72,7 @@ components:
     start:
       method: watch_start
       params:
-        - name: service
+        - name: service_id
           label: SQL Service
           type: service
           traits: sql
