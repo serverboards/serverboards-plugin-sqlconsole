@@ -20,24 +20,26 @@ function DataGrid(props){
     )
   return (
     <div style={{flexGrow:1, overflow: "scroll"}}>
-      <table className={`ui ${ props.loading ? "grey" : "green" } celled unstackable table`}>
-        <thead>
-          <tr>
-            {props.headers.map( (h, i) => (
-              <th key={i}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {props.data.map( (row, i) => (
-            <tr key={i}>
-              {row.map( (cell, i) => (
-                <td key={i}>{to_string(cell)}</td>
+      <div className="ui padding">
+        <table className={`ui ${ props.loading ? "grey" : "green" } celled unstackable table`}>
+          <thead>
+            <tr>
+              {props.headers.map( (h, i) => (
+                <th key={i}>{h}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {props.data.map( (row, i) => (
+              <tr key={i}>
+                {row.map( (cell, i) => (
+                  <td key={i}>{to_string(cell)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }

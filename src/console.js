@@ -138,7 +138,7 @@ const Console=React.createClass({
             </div>
           </div>
         </div>
-        <div className="ui container" style={{flexDirection: "column", flexGrow: 1, display: "flex", paddingBottom: 20}}>
+        <div className="ui container expand" style={{display: "flex", flexDirection: "column", maxHeight: "calc( 100vh - 220px )"}}>
           <DataGrid data={state.data} headers={state.columns} loading={loading_data}/>
           <SQLTextInput onExecute={this.handleExecute} loading={loading_data}/>
         </div>

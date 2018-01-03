@@ -19,7 +19,7 @@ const SQLTextInput=React.createClass({
   },
   render(){
     return (
-      <div className="ui form" style={{flexGrow:0}}>
+      <div className="ui form with padding" style={{flexGrow:0}}>
         <textarea
           ref="textarea"
           className={`ui input ${ this.props.loading ? "disabled" : ""}`}
