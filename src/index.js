@@ -11,7 +11,6 @@ function main(el, settings){
   }
 
   Serverboards.ReactDOM.render(React.createElement(MyConsole, null), el)
-
   return function(){
     Serverboards.ReactDOM.unmountComponentAtNode(el)
   }

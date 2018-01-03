@@ -101,7 +101,7 @@ const Console=React.createClass({
     const service=state.service || {}
     const loading_data = state.loading_data || state.loading_database || state.loading_tables
     return (
-      <div ref="el" style={{flexDirection: "column", flexGrow: 1, display: "flex"}}>
+      <div ref="el" style={{flexDirection: "column", flexGrow: 1, display: "flex", maxHeight: "100%"}}>
         <div className="ui top secondary menu">
           <h3 className="ui header">SQL Console for <i>{service.name}</i></h3>
           <div className="right menu">
@@ -138,7 +138,7 @@ const Console=React.createClass({
             </div>
           </div>
         </div>
-        <div className="ui container expand" style={{display: "flex", flexDirection: "column", maxHeight: "calc( 100vh - 220px )"}}>
+        <div className="ui container expand" style={{display: "flex", flexDirection: "column", maxHeight: "calc( 100% - 65px )"}}>
           <DataGrid data={state.data} headers={state.columns} loading={loading_data}/>
           <SQLTextInput onExecute={this.handleExecute} loading={loading_data}/>
         </div>
