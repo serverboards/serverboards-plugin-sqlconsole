@@ -2,6 +2,7 @@
 import sys
 import datetime
 import serverboards
+import yaml
 from serverboards import rpc, print
 
 td_to_s_multiplier = [
@@ -33,15 +34,17 @@ class Connection:
             return x.isoformat()
         return x
 
-    def execute(self, query):
+    def execute(self, query, data=None):
         with self.conn.cursor() as cur:
             try:
-                cur.execute(query)
-                return {
-                    "columns": [x[0] for x in cur.description],
-                    "data": [[self.serialize(y) for y in x]
-                             for x in cur.fetchall()]
-                }
+                cur.execute(query, data)
+                if cur.description:
+                    return {
+                        "columns": [x[0] for x in cur.description],
+                        "data": [[self.serialize(y) for y in x]
+                                 for x in cur.fetchall()]
+                    }
+                return cur
             except Exception:
                 conn.conn.rollback()
                 raise
@@ -114,8 +117,16 @@ conn = False
 
 
 @serverboards.rpc_method
-def open(via=None, type="postgresql", hostname="localhost", port=None,
-         username=None, password_pw=None, database=None):
+def open(service_id, database=None):
+    config = serverboards.service.get(service_id).get("config")
+
+    via = config.get("via")
+    type = config.get("type", "postgresql")
+    hostname = config.get("hostname", "localhost")
+    port = config.get("port", None)
+    username = config.get("username", None)
+    password_pw = config.get("password_pw", None)
+
     print("open", via, type, hostname, port, username, password_pw, database)
     global conn
     if conn:
@@ -216,6 +227,19 @@ def watch_stop(id):
     serverboards.info("Stop SQL query watch %s" % (id))
     serverboards.rpc.remove_timer(id)
     return "ok"
+
+
+@serverboards.rpc_method
+def insert_row(server, database, table, data):
+    print("Insert to %s/%s/%s" % (server, database, table))
+    data = yaml.load(data)
+    print("Data: %s" % data)
+    open(server, database)
+    assert conn
+    insert = "INSERT INTO %s (%s) VALUES (%s)" % \
+        (table, ','.join(data.keys()), ','.join('%s' for x in data.values()))
+    print("insert\n %s \n %s" % (insert, list(data.values())))
+    conn.execute(insert, list(data.values()))
 
 
 if __name__ == '__main__':

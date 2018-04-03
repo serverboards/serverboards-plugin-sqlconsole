@@ -9,7 +9,7 @@ version: "18.01"
 components:
   - id: service
     type: service
-    name: SQL Server
+    name: SQL Database Server
     icon: database
     traits: sql server
     description: |
@@ -56,7 +56,7 @@ components:
 
   - id: daemon
     type: cmd
-    timeout: 15m
+    timeout: 10s
     command: ./serverboards-sql.py
     name: Remote run SQL commands
     perms: plugin service.get
@@ -104,3 +104,42 @@ components:
     result:
       value: Response of the query
     stop: watch_stop
+
+
+  - id: insert_row
+    name: Insert row at database
+    description: Inserts a row of data into a database table
+    type: action
+    traits: sql server
+    icon: database
+    command: serverboards.remotesql/daemon
+    debug: true
+    call:
+      method: insert_row
+      params:
+        - name: server
+          label: SQL Database Server
+          type: service
+          traits: sql server
+        - name: database
+          label: SQL Database
+          type: text
+        - name: table
+          label: SQL Table
+          type: text
+        - name: data
+          type: textarea
+          label: Data to insert
+          description: |
+            List of fields to insert with the data (YAML format):
+
+            ```yaml
+            name: {{A.data.name|json}}
+            source: rule
+            ```
+
+            **Extra care is needed to avoid SQL injections or bad data
+            insertions! Use {{varname|json}} to avoid problems**
+
+            Missing elements will be inserted as NULL, so they can use default
+            values as auto incrementing indexes.

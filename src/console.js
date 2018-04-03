@@ -63,12 +63,7 @@ const Console=React.createClass({
     $(this.refs.table).dropdown("set text", "Loading tables...")
     this.setState({loading_tables:true})
     return plugin.call("open", {
-      via: map_get(c, ["via", "uuid"]),
-      type: c.type,
-      hostname: c.hostname,
-      port: c.port,
-      username: c.username,
-      password_pw: c.password_pw,
+      service_id: service["uuid"],
       database: database
     }).then( () => plugin.call("tables")).then( (tables) => {
       $(this.refs.table).dropdown("set value", "")
