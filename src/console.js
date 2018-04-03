@@ -1,10 +1,12 @@
 const {React, rpc, Flash, plugin} = Serverboards
+const {map_get} = Serverboards.utils
 
 import SQLTextInput from './sqltextinput'
 import DataGrid from './datagrid'
 
 const Console=React.createClass({
   getInitialState(){
+    console.log(this.props)
     return {
       data:[
       ],
@@ -15,13 +17,13 @@ const Console=React.createClass({
       loading_database: true,
       loading_tables: false,
       loading_data: false,
-      service: this.props.service,
+      service: this.props.data.service.uuid,
     }
   },
   componentDidMount(){
     Promise.all([
       plugin.start("serverboards.remotesql/daemon"),
-      rpc.call("service.get", [this.props.service.uuid])
+      rpc.call("service.get", [this.props.data.service.uuid])
     ]).then( (plugin_service) => {
       let plugin = plugin_service[0]
       let service = plugin_service[1]
@@ -61,7 +63,7 @@ const Console=React.createClass({
     $(this.refs.table).dropdown("set text", "Loading tables...")
     this.setState({loading_tables:true})
     return plugin.call("open", {
-      via: c.via.uuid,
+      via: map_get(c, ["via", "uuid"]),
       type: c.type,
       hostname: c.hostname,
       port: c.port,
