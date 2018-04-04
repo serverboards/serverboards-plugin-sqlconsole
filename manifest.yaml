@@ -113,7 +113,6 @@ components:
     traits: sql server
     icon: database
     command: serverboards.remotesql/daemon
-    debug: true
     call:
       method: insert_row
       params:
