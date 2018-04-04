@@ -231,14 +231,15 @@ def watch_stop(id):
 
 @serverboards.rpc_method
 def insert_row(server, database, table, data):
-    print("Insert to %s/%s/%s" % (server, database, table))
+    # print("Insert to %s/%s/%s" % (server, database, table))
     data = yaml.load(data)
-    print("Data: %s" % data)
+    # print("Data: %s" % data)
     open(server, database)
     assert conn
+    # field names as is, values as "%s" to fill later.
     insert = "INSERT INTO %s (%s) VALUES (%s)" % \
         (table, ','.join(data.keys()), ','.join('%s' for x in data.values()))
-    print("insert\n %s \n %s" % (insert, list(data.values())))
+    # print("insert\n %s \n %s" % (insert, list(data.values())))
     conn.execute(insert, list(data.values()))
 
 
@@ -256,5 +257,5 @@ if __name__ == '__main__':
         print(execute("SELECT * FROM test;"))
         close()
     else:
-        serverboards.rpc.call("debug", True)
+        # serverboards.rpc.call("debug", True)
         serverboards.loop()
