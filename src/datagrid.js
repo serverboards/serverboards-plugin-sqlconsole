@@ -3,7 +3,11 @@ let React = Serverboards.React
 function DataGrid(props){
   function to_string(c){
     if (typeof(c) == 'object')
-      return JSON.stringify(c)
+      return (
+        <pre>
+          {JSON.stringify(c, null, 2)}
+        </pre>
+      )
     if (c===true)
       return "True"
     if (c==false)
