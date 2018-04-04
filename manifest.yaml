@@ -56,7 +56,7 @@ components:
 
   - id: daemon
     type: cmd
-    timeout: 10s
+    timeout: 10m
     command: ./serverboards-sql.py
     name: Remote run SQL commands
     perms: plugin service.get
