@@ -130,11 +130,23 @@ components:
           type: service
           traits: sql server
         - name: database
-          label: SQL Database
-          type: text
+          label: Database name
+          type: select call
+          options:
+            command: serverboards.remotesql/daemon_singleton
+            call: databases_select
+            params:
+              - name: server
         - name: table
           label: SQL Table
-          type: text
+          type: select call
+          dynamic: true
+          options:
+            command: serverboards.remotesql/daemon_singleton
+            call: table_select
+            params:
+              - name: server
+              - name: database
         - name: data
           type: textarea
           label: Data to insert
@@ -164,5 +176,10 @@ components:
     schema: schema
     params:
       - name: database
-        type: text
         label: Database name
+        type: select call
+        options:
+          command: serverboards.remotesql/daemon_singleton
+          call: databases_select
+          params:
+            - name: service_id

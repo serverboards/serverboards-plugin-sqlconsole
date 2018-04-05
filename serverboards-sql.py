@@ -197,8 +197,35 @@ def databases():
 
 
 @serverboards.rpc_method
+def databases_select(**kwargs):
+    service_id = (
+        kwargs.get("service") or
+        kwargs.get("service_id") or
+        kwargs.get("server")
+    )
+    assert service_id
+    open_(service_id)
+    databases = conn.databases()
+
+    return [
+        {"name": d, "value": d}
+        for d in databases
+    ]
+
+
+@serverboards.rpc_method
 def tables():
     return conn.tables()
+
+
+@serverboards.rpc_method
+def table_select(server, database):
+    open_(server, database)
+    tables = conn.tables()
+    return [
+        {"name": d, "value": d}
+        for d in tables
+    ]
 
 
 @serverboards.rpc_method
