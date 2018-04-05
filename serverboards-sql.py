@@ -73,6 +73,7 @@ class PostgreSQL(Connection):
             database=database, user=username,
             password=password_pw, host=hostname, port=port)
         self.conn.autocommit = True  # no transaction at start
+        self.database = database
 
     def databases(self):
         return [
@@ -86,6 +87,14 @@ class PostgreSQL(Connection):
             x[0] for x in
             execute("SELECT relname FROM pg_class WHERE relkind='r' AND relname !~ '^(pg_|sql_)';")[
                 'data']
+        ]
+
+    def columns(self, table):
+        return [
+            x[0] for x in
+            self.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_catalog = %s AND table_name = %s"
+                , [self.database, table])['data']
         ]
 
 
@@ -116,8 +125,8 @@ class MySQL(Connection):
 conn = False
 
 
-@serverboards.rpc_method
-def open(service_id, database=None):
+@serverboards.rpc_method("open")
+def open_(service_id, database=None):
     config = serverboards.service.get(service_id).get("config")
 
     via = config.get("via")
@@ -127,7 +136,7 @@ def open(service_id, database=None):
     username = config.get("username", None)
     password_pw = config.get("password_pw", None)
 
-    print("open", via, type, hostname, port, username, password_pw, database)
+    # print("open", via, type, hostname, port, username, password_pw, database)
     global conn
     if conn:
         conn.close()
@@ -137,7 +146,7 @@ def open(service_id, database=None):
         conn.port = None
     hostname = hostname or "localhost"
 
-    if type == "postgresql":
+    if type == "postgresql" or type == "postgres":
         port = port or 5432
         database = database or "template1"
         conn = PostgreSQL(via, hostname, port, username, password_pw, database)
@@ -172,8 +181,8 @@ def tables():
 
 
 @serverboards.rpc_method
-def execute(query):
-    return conn.execute(query)
+def execute(query, data=None):
+    return conn.execute(query, data)
 
 
 def is_truish(s):
@@ -201,8 +210,8 @@ def get_service_config(service_id):
 def watch_start(id=None, period=None, service_id=None,
                 database=None, query=None, **kwargs):
     period_s = time_description_to_seconds(period or "5m")
-    print(id, period, service_id, database, query, kwargs)
-    open(**get_service_config(service_id), database=database)
+    # print(id, period, service_id, database, query, kwargs)
+    open_(service_id, database=database)
 
     class Check:
 
@@ -234,7 +243,7 @@ def insert_row(server, database, table, data):
     # print("Insert to %s/%s/%s" % (server, database, table))
     data = yaml.load(data)
     # print("Data: %s" % data)
-    open(server, database)
+    open_(server, database)
     assert conn
     # field names as is, values as "%s" to fill later.
     insert = "INSERT INTO %s (%s) VALUES (%s)" % \
@@ -243,19 +252,68 @@ def insert_row(server, database, table, data):
     conn.execute(insert, list(data.values()))
 
 
+@serverboards.rpc_method
+def schema(config, table=None):
+    open_(config.get("service"), database=config.get("database"))
+    if not table:
+        return conn.tables()
+    else:
+        return {
+            "columns": conn.columns(table)
+        }
+
+
+@serverboards.rpc_method
+def extractor(config, table, quals, columns):
+    open_(config.get("service"), database=config.get("database"))
+
+    if quals:
+        where = ["%s %s %%s" % (q[0], q[1]) for q in quals]
+        values = [q[2] for q in quals]
+        data = execute("SELECT %s FROM %s WHERE %s" %
+                       (','.join(columns), table, ' AND '.join(where)), values)
+    else:
+        data = execute("SELECT %s FROM %s" % (','.join(columns), table))
+
+    return {
+        "columns": data["columns"],
+        "rows": data["data"]
+    }
+
+
+def test():
+    import smock
+    from pcolor import printc
+    smocked = smock.SMock("mock.yaml")
+    serverboards.service.get = smocked.mock_method("service.get")
+    printc("mocked")
+    open_("XXX", database="serverboards")
+    printc('databases', databases())
+    printc('tables', tables())
+    printc(execute("SELECT count(*) FROM auth_user;"))
+
+    printc("\nSchema", color="green")
+    config = {"service": "XXX", "database": "sbds"}
+    printc('schema', schema(config))
+    printc('auth_user', schema(config, 'auth_user'))
+
+    printc("\nExtractor", color="green")
+    data = extractor(config, 'auth_user', [], ['id', 'name', 'is_active'])
+    printc('extractor all', data)
+    assert len(data["rows"]) > 1
+
+    printc("\n")
+    data = extractor(config, 'auth_user',
+                     [['id', '=', 1]], ['id', 'name', 'is_active'])
+    printc('extractor quals', data)
+    assert len(data["rows"]) == 1
+
+    close()
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == "test":
-        open(None, "postgresql", "localhost", 5432, username="serverboards",
-             password_pw="serverboards", database="sbds")
-        print(execute("SELECT * FROM auth_user;"))
-        close()
-    elif len(sys.argv) > 1 and sys.argv[1] == "test2":
-        open(None, "mysql", "localhost", 3306, username="serverboards",
-             password_pw="serverboards", database="test")
-        print(databases())
-        print(tables())
-        print(execute("SELECT * FROM test;"))
-        close()
+        test()
     else:
         # serverboards.rpc.call("debug", True)
         serverboards.loop()

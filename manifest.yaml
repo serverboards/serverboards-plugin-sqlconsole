@@ -142,3 +142,17 @@ components:
 
             Missing elements will be inserted as NULL, so they can use default
             values as auto incrementing indexes.
+
+  - id: extractor
+    type: extractor
+    description: Extract data from SQL databases
+    service: serverboards.remotesql/service
+    traits: sql server
+    icon: sql
+    command: serverboards.remotesql/daemon
+    extractor: extractor
+    schema: schema
+    params:
+      - name: database
+        type: text
+        label: Database name

@@ -1,0 +1,10 @@
+service.get:
+  - args: ["XXX"]
+    kwargs: {}
+    response:
+      config:
+        type: postgres
+        hostname: localhost
+        username: serverboards
+        password_pw: serverboards
+        
