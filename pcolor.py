@@ -26,12 +26,15 @@ def printc(*s, color="grey", hl=None, bg=None, file=sys.stderr):
         hl = True
     code = colors.get(color)
     text = ' '.join(str(x) for x in s)
-    if code:
-        hl = 1 if hl else 0
-        if bg:
-            code += 10
-        file.write("\r\033[{hl};{color}m{text}\033[1;m\n".format(
-            hl=hl, text=text, color=code))
-    else:
-        file.write(text + '\n')
-    file.flush()
+    try:
+        if code:
+            hl = 1 if hl else 0
+            if bg:
+                code += 10
+            file.write("\r\033[{hl};{color}m{text}\033[1;m\n".format(
+                hl=hl, text=text, color=code))
+        else:
+            file.write(text + '\n')
+        file.flush()
+    except BlockingIOError:
+        print("Blocked print: ", text, file=file)

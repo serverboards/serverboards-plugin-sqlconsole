@@ -4,6 +4,7 @@ import datetime
 import serverboards
 import yaml
 from serverboards import rpc, print
+from pcolor import printc
 
 td_to_s_multiplier = [
     ("ms", 0.001),
@@ -44,12 +45,18 @@ class Connection:
                         "data": [[self.serialize(y) for y in x]
                                  for x in cur.fetchall()]
                     }
-                return cur
+                return {
+                    "columns": "message",
+                    "data": [[cur.statusmessage]]
+                }
             except Exception:
                 conn.conn.rollback()
                 raise
+            finally:
+                conn.conn.commit()
 
     def close(self):
+        print("closed conn", self.conn)
         self.conn.close()
 
     def connect_port(self, via, hostname, port):
@@ -123,10 +130,19 @@ class MySQL(Connection):
 
 
 conn = False
+conn_desc = ()
 
 
 @serverboards.rpc_method("open")
 def open_(service_id, database=None):
+    global conn
+    global conn_desc
+    new_conn_desc = (service_id, database)
+
+    if conn and conn_desc == new_conn_desc:
+        return True
+
+    # get config from service
     config = serverboards.service.get(service_id).get("config")
 
     via = config.get("via")
@@ -136,25 +152,28 @@ def open_(service_id, database=None):
     username = config.get("username", None)
     password_pw = config.get("password_pw", None)
 
-    # print("open", via, type, hostname, port, username, password_pw, database)
-    global conn
+    # if conn, close it
     if conn:
         conn.close()
         if conn.ssh_plugin_id:
             rpc.call("%s.close_port" % conn.ssh_plugin_id, port=conn.port)
         conn.conn = None
         conn.port = None
+        conn_desc = ()
+
     hostname = hostname or "localhost"
 
     if type == "postgresql" or type == "postgres":
         port = port or 5432
         database = database or "template1"
         conn = PostgreSQL(via, hostname, port, username, password_pw, database)
+        conn_desc = new_conn_desc
         return True
     if type == "mysql":
         port = port or 3306
         database = database or "mysql"
         conn = MySQL(via, hostname, port, username, password_pw, database)
+        conn_desc = new_conn_desc
         return True
 
     raise Exception("Database type %s not supported" % (type))
@@ -164,7 +183,9 @@ def open_(service_id, database=None):
 @serverboards.rpc_method
 def close():
     global conn
+    global conn_desc
     conn.close()
+    conn_desc = ()
     if conn.ssh_plugin_id:
         rpc.call("%s.close_port" % conn.ssh_plugin_id, port=conn.port)
     sys.exit(0)
@@ -254,7 +275,8 @@ def insert_row(server, database, table, data):
 
 @serverboards.rpc_method
 def schema(config, table=None):
-    open_(config.get("service"), database=config.get("database"))
+    config = config.get("config")
+    open_(config.get("service_id"), database=config.get("database"))
     if not table:
         return conn.tables()
     else:
@@ -265,15 +287,24 @@ def schema(config, table=None):
 
 @serverboards.rpc_method
 def extractor(config, table, quals, columns):
-    open_(config.get("service"), database=config.get("database"))
+    # print("extractor config", config)
+    config = config.get("config")
+    open_(config.get("service_id"), database=config.get("database"))
 
     if quals:
         where = ["%s %s %%s" % (q[0], q[1]) for q in quals]
         values = [q[2] for q in quals]
-        data = execute("SELECT %s FROM %s WHERE %s" %
-                       (','.join(columns), table, ' AND '.join(where)), values)
+        sql = ("SELECT %s FROM %s WHERE %s" %
+               (','.join(columns), table, ' AND '.join(where))
+               )
+        # print(sql)
+        data = execute(sql, values)
     else:
-        data = execute("SELECT %s FROM %s" % (','.join(columns), table))
+        sql = "SELECT %s FROM %s" % (','.join(columns), table)
+        # printc(sql)
+        data = execute(sql)
+
+    # printc(data)
 
     return {
         "columns": data["columns"],
@@ -283,7 +314,6 @@ def extractor(config, table, quals, columns):
 
 def test():
     import smock
-    from pcolor import printc
     smocked = smock.SMock("mock.yaml")
     serverboards.service.get = smocked.mock_method("service.get")
     printc("mocked")
@@ -293,7 +323,7 @@ def test():
     printc(execute("SELECT count(*) FROM auth_user;"))
 
     printc("\nSchema", color="green")
-    config = {"service": "XXX", "database": "sbds"}
+    config = {"config": {"service_id": "XXX", "database": "sbds"}}
     printc('schema', schema(config))
     printc('auth_user', schema(config, 'auth_user'))
 

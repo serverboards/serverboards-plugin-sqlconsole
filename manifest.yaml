@@ -61,6 +61,15 @@ components:
     name: Remote run SQL commands
     perms: plugin service.get
 
+  - id: daemon_singleton
+    type: cmd
+    timeout: 30s
+    strategy: singleton
+    command: ./serverboards-sql.py
+    name: Remote run SQL commands
+    perms: plugin service.get
+
+
 
   - id: trigger
     name: SQL Query
@@ -144,12 +153,13 @@ components:
             values as auto incrementing indexes.
 
   - id: extractor
+    name: SQL Database
     type: extractor
     description: Extract data from SQL databases
     service: serverboards.remotesql/service
     traits: sql server
     icon: sql
-    command: serverboards.remotesql/daemon
+    command: serverboards.remotesql/daemon_singleton
     extractor: extractor
     schema: schema
     params:
