@@ -313,10 +313,14 @@ def schema(config, table=None):
 
 
 @serverboards.rpc_method
-def extractor(config, table, quals, columns):
+def extractor(config, table, quals, orig_columns):
     # print("extractor config", config)
     config = config.get("config")
     open_(config.get("service_id"), database=config.get("database"))
+
+    columns = orig_columns
+    if not orig_columns:
+        columns = ["COUNT(*)"]
 
     if quals:
         where = ["%s %s %%s" % (q[0], q[1]) for q in quals]
@@ -326,16 +330,19 @@ def extractor(config, table, quals, columns):
                )
         # print(sql)
         data = execute(sql, values)
+        rows = data["data"]
     else:
         sql = "SELECT %s FROM %s" % (','.join(columns), table)
         # printc(sql)
         data = execute(sql)
+        rows = data["data"]
 
-    # printc(data)
+    if not orig_columns:
+        rows = [[] for x in range(rows[0][0])]
 
     return {
-        "columns": data["columns"],
-        "rows": data["data"]
+        "columns": orig_columns,
+        "rows": rows
     }
 
 
@@ -364,6 +371,13 @@ def test():
                      [['id', '=', 1]], ['id', 'name', 'is_active'])
     printc('extractor quals', data)
     assert len(data["rows"]) == 1
+
+
+    printc("\n")
+    data = extractor(config, 'auth_user',
+                     [['id', '>=', 1]], [])
+    printc('no columns', data)
+    assert data["rows"] == [[], []]
 
     close()
 
